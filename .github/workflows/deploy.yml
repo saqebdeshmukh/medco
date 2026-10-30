@@ -1,0 +1,56 @@
+
+name: Medco - CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: medco-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare PHP application files
+        shell: pwsh
+        run: |
+          if (!(Test-Path "index.php")) {
+            throw "index.php not found. Check repository structure."
+          }
+
+          if (!(Test-Path "config/app.php")) {
+            throw "config/app.php not found."
+          }
+
+          if (!(Test-Path "data")) {
+            New-Item -ItemType Directory -Path "data" | Out-Null
+          }
+
+          robocopy . deploy /E /XD .git .github deploy
+
+          if ($LASTEXITCODE -gt 7) {
+            throw "Failed to prepare deployment files."
+          }
+
+          Write-Host "Medco deployment files prepared successfully."
+
+      - name: Deploy to MonsterASP.NET via Web Deploy
+        uses: rasmusbuchholdt/simply-web-deploy@2.1.0
+        with:
+          website-name: ${{ secrets.MEDCO_WEBSITE_NAME }}
+          server-computer-name: ${{ secrets.MEDCO_SERVER_COMPUTER_NAME }}
+          server-username: ${{ secrets.MEDCO_SERVER_USERNAME }}
+          server-password: ${{ secrets.MEDCO_SERVER_PASSWORD }}
+          source-path: '\deploy\'
+          target-delete: false
