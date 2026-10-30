@@ -52,5 +52,5 @@ jobs:
           server-computer-name: ${{ secrets.MEDCO_SERVER_COMPUTER_NAME }}
           server-username: ${{ secrets.MEDCO_SERVER_USERNAME }}
           server-password: ${{ secrets.MEDCO_SERVER_PASSWORD }}
-          source-path: '\deploy\'
+          source-path: 'deploy'
           target-delete: false
