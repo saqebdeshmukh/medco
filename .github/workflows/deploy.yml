@@ -22,9 +22,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      
       - name: Prepare PHP application files
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
+
           if (!(Test-Path "index.php")) {
             throw "index.php not found. Check repository structure."
           }
@@ -37,13 +40,28 @@ jobs:
             New-Item -ItemType Directory -Path "data" | Out-Null
           }
 
-          robocopy . deploy /E /XD .git .github deploy
+          if (Test-Path "deploy") {
+            Remove-Item "deploy" -Recurse -Force
+          }
 
-          if ($LASTEXITCODE -gt 7) {
-            throw "Failed to prepare deployment files."
+          robocopy . deploy /E /XD .git .github deploy
+          $copyExitCode = $LASTEXITCODE
+
+          Write-Host "Robocopy exit code: $copyExitCode"
+
+          if ($copyExitCode -ge 8) {
+            throw "File preparation failed. Robocopy exit code: $copyExitCode"
+          }
+
+          if (!(Test-Path "deploy/index.php")) {
+            throw "index.php is missing from the deployment folder."
           }
 
           Write-Host "Medco deployment files prepared successfully."
+
+          # Robocopy exit codes 0–7 indicate success.
+          $global:LASTEXITCODE = 0
+
 
       - name: Deploy to MonsterASP.NET via Web Deploy
         uses: rasmusbuchholdt/simply-web-deploy@2.1.0
